@@ -1,0 +1,112 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<title>Launcher</title>
+<style>
+  :root{--accent:#3b6bff;--hi:#00d4ff;--bg:#0d0d1a;--panel:#111827;--ink:#eef2ff;--muted:#8b93ad}
+  *{box-sizing:border-box;margin:0}
+  html,body{height:100%;overflow:hidden}
+  body{background:var(--bg);color:var(--ink);font:14px/1.5 "Segoe UI",system-ui,sans-serif;user-select:none}
+  #bg{position:fixed;inset:0;background-size:cover;background-position:center}
+  #bg video{width:100%;height:100%;object-fit:cover}
+  #shade{position:fixed;inset:0;
+    background:linear-gradient(180deg,rgba(13,13,26,.35) 0%,rgba(13,13,26,.55) 45%,rgba(13,13,26,.96) 100%)}
+  .bar{position:fixed;top:0;left:0;right:0;height:36px;display:flex;justify-content:flex-end;
+       -webkit-app-region:drag;z-index:5}
+  .bar button{-webkit-app-region:no-drag;width:46px;height:36px;border:0;background:none;
+              color:var(--ink);font-size:15px;cursor:pointer}
+  .bar button:hover{background:rgba(255,255,255,.12)}
+  .bar button.x:hover{background:#c42b1c}
+  main{position:relative;height:100%;display:flex;flex-direction:column;justify-content:flex-end;padding:0 44px 36px}
+  h1{font-size:44px;font-weight:700;letter-spacing:-.5px;line-height:1.1}
+  .meta{color:var(--muted);margin:8px 0 14px}
+  .desc{max-width:52ch;color:#c7cde3;margin-bottom:26px}
+  .row{display:flex;align-items:center;gap:22px}
+  #play{flex:none;min-width:170px;height:52px;border:0;border-radius:4px;background:var(--accent);
+        color:#fff;font:700 16px "Segoe UI",sans-serif;cursor:pointer;transition:background .15s,transform .15s}
+  #play:hover:not(:disabled){background:var(--hi);color:#001018}
+  #play:active:not(:disabled){transform:scale(.98)}
+  #play:disabled{background:#2a3350;color:var(--muted);cursor:default}
+  #play:focus-visible{outline:2px solid var(--hi);outline-offset:3px}
+  .prog{flex:1;min-width:0}
+  .prog .top{display:flex;justify-content:space-between;color:var(--muted);font-size:13px;margin-bottom:6px}
+  .track{height:4px;background:rgba(255,255,255,.14);border-radius:2px;overflow:hidden}
+  #fill{height:100%;width:0;background:linear-gradient(90deg,var(--accent),var(--hi));transition:width .2s}
+  #err{color:#ff7b7b;min-height:20px;margin-top:10px}
+  /* dikey şekil */
+  body.vertical main{padding:0 28px 30px}
+  body.vertical h1{font-size:34px}
+  body.vertical .row{flex-direction:column;align-items:stretch;gap:16px}
+  body.vertical #play{order:2;width:100%}
+  @media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+  <div id="bg"></div><div id="shade"></div>
+  <div class="bar"><button id="min" aria-label="Küçült">─</button><button id="close" class="x" aria-label="Kapat">✕</button></div>
+
+  <main>
+    <h1 id="name"></h1>
+    <p class="meta" id="meta"></p>
+    <p class="desc" id="desc"></p>
+    <div class="row">
+      <button id="play" disabled>Hazırlanıyor</button>
+      <div class="prog">
+        <div class="top"><span id="status">Dosyalar kontrol ediliyor…</span><span id="pct"></span></div>
+        <div class="track"><div id="fill"></div></div>
+      </div>
+    </div>
+    <div id="err" role="alert"></div>
+  </main>
+
+<script>
+const $ = id => document.getElementById(id);
+const setP = p => { $('fill').style.width = p + '%'; $('pct').textContent = p ? p + '%' : ''; };
+let ready = false;
+
+api.onProgress(({ got, total }) => {
+  if (!total) { $('status').textContent = 'İndiriliyor… ' + (got / 1048576).toFixed(1) + ' MB'; return; }
+  const p = Math.floor(got / total * 100);
+  $('status').textContent = 'İndiriliyor… ' + (got / 1048576).toFixed(1) + ' / ' + (total / 1048576).toFixed(1) + ' MB';
+  setP(p);
+});
+api.onState(s => {
+  $('play').disabled = s === 'running';
+  $('play').textContent = s === 'running' ? 'Çalışıyor' : 'Oyna';
+});
+
+(async () => {
+  const c = await api.config();
+  document.title = c.name;
+  document.documentElement.style.setProperty('--accent', c.gui.accent);
+  document.documentElement.style.setProperty('--bg', c.gui.background.color);
+  if (c.gui.shape === 'vertical') document.body.classList.add('vertical');
+  const bg = c.gui.background;
+  if (bg.video) $('bg').innerHTML = '<video src="' + bg.video + '" autoplay muted loop playsinline></video>';
+  else if (bg.image) $('bg').style.backgroundImage = 'url("' + bg.image + '")';
+
+  $('name').textContent = c.name;
+  $('meta').textContent = 'Sürüm ' + c.version + (c.developer ? '  ·  ' + c.developer : '');
+  $('desc').textContent = c.description;
+
+  const r = await api.download();
+  if (!r.ok) { $('status').textContent = 'Hazır değil'; $('err').textContent = r.error; return; }
+  setP(100);
+  $('status').textContent = 'Oynamaya hazır';
+  $('play').disabled = false;
+  $('play').textContent = 'Oyna';
+  ready = true;
+})();
+
+$('play').onclick = async () => {
+  if (!ready) return;
+  $('err').textContent = '';
+  const r = await api.play();
+  if (!r.ok) $('err').textContent = r.error;
+};
+$('min').onclick = () => api.win('min');
+$('close').onclick = () => api.win('close');
+</script>
+</body>
+</html>
