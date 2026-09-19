@@ -1,4 +1,4 @@
-name: Build Windows EXE
+name: Build HtStudio Runtime EXE
 
 on:
   workflow_dispatch:
@@ -14,60 +14,39 @@ jobs:
   build:
     runs-on: windows-latest
     steps:
-      - name: Checkout
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
 
-      - name: Setup Node.js
-        uses: actions/setup-node@v4
+      # Python 3.8: Windows 7'de çalışan son resmi sürüm
+      - uses: actions/setup-python@v5
         with:
-          node-version: '20'
-          cache: 'npm'
+          python-version: '3.8'
+          architecture: x64
 
-      - name: Detect project directory
-        id: detect
+      - name: Install PyInstaller
+        run: pip install pyinstaller
+
+      - name: Build EXE
+        run: |
+          pyinstaller --onefile --noconsole --name HtStudioRuntime --add-data "shell;shell" bootstrap.py
+
+      - name: List output
         shell: bash
         run: |
-          if [ -f "package.json" ]; then
-            echo "dir=." >> $GITHUB_OUTPUT
-          elif [ -f "shell/package.json" ]; then
-            echo "dir=shell" >> $GITHUB_OUTPUT
-          else
-            echo "package.json bulunamadı (root veya shell/)"
-            ls -la
-            exit 1
-          fi
+          ls -la dist/ || true
+          find . -name "*.exe" -type f
 
-      - name: Install dependencies
-        working-directory: ${{ steps.detect.outputs.dir }}
-        run: |
-          npm install
-          npm install electron-builder --save-dev
-
-      - name: Build Windows (NSIS + Portable)
-        working-directory: ${{ steps.detect.outputs.dir }}
-        run: |
-          npx electron-builder --win nsis:ia32 --x64 -c.win.forceCodeSigning=false
-          npx electron-builder --win portable --x64 -c.win.forceCodeSigning=false
-        env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: Upload artifacts
+      - name: Upload artifact
         uses: actions/upload-artifact@v4
         with:
-          name: HtStudio-Windows-EXE
-          path: |
-            **/dist/*.exe
-            **/*Setup*.exe
-            **/*portable*.exe
-            **/*-setup.exe
-          if-no-files-found: warn
-          retention-days: 14
+          name: HtStudioRuntime
+          path: dist/HtStudioRuntime.exe
+          if-no-files-found: error
+          retention-days: 30
 
-      - name: Upload to GitHub Release
+      - name: Upload to Release
         if: github.event_name == 'release'
         uses: softprops/action-gh-release@v2
         with:
-          files: |
-            **/dist/*.exe
+          files: dist/HtStudioRuntime.exe
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
