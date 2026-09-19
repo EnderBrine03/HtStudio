@@ -1,0 +1,62 @@
+name: Build HtStudio V2
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [v2]
+    paths:
+      - 'v2/**'
+      - '.github/workflows/build-v2.yml'
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          architecture: x64
+
+      - name: Install deps
+        working-directory: v2
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt pyinstaller
+
+      - name: Build onedir
+        working-directory: v2
+        run: |
+          pyinstaller --noconfirm --clean --noconsole --onedir --name HtStudioV2 main.py
+
+      - name: Pack sample-project (sidecar)
+        working-directory: v2
+        shell: bash
+        run: |
+          python pack.py dist/HtStudioV2/HtStudioV2.exe sample-project dist/HtStudioV2/OrnekV2.exe --sidecar
+          ls -la dist/HtStudioV2/
+
+      - name: Zip release folder
+        working-directory: v2
+        shell: bash
+        run: |
+          cd dist
+          # Zip the whole onedir output
+          powershell -Command "Compress-Archive -Path 'HtStudioV2' -DestinationPath 'HtStudioV2-win.zip' -Force"
+          ls -la
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HtStudioV2-win
+          path: |
+            v2/dist/HtStudioV2-win.zip
+            v2/dist/HtStudioV2/HtStudioV2.exe
+            v2/dist/HtStudioV2/OrnekV2.exe
+            v2/dist/HtStudioV2/OrnekV2.htpack
+          if-no-files-found: error
+          retention-days: 30
