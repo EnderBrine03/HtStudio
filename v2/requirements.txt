@@ -1,0 +1,3 @@
+# Çalıştırma / derleme bağımlılıkları (Windows 7 - 11 uyumlu son PyQt5 hattı)
+PyQt5>=5.15.9
+PyQtWebEngine>=5.15.6
