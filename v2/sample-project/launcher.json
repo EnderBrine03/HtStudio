@@ -1,0 +1,10 @@
+{
+  "id": "com.enderarcane.sample",
+  "name": "HtStudio Örnek Uygulama",
+  "version": "1.0.0",
+  "developer": "Ender Arcane Studio",
+  "entry": "index.html",
+  "window": { "width": 980, "height": 720, "fullscreen": false, "resizable": true },
+  "permissions": ["fs", "clipboard", "notify", "open", "geolocation", "camera"],
+  "libs": []
+}
