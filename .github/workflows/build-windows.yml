@@ -1,0 +1,73 @@
+name: Build Windows EXE
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build:
+    runs-on: windows-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+
+      - name: Detect project directory
+        id: detect
+        shell: bash
+        run: |
+          if [ -f "package.json" ]; then
+            echo "dir=." >> $GITHUB_OUTPUT
+          elif [ -f "shell/package.json" ]; then
+            echo "dir=shell" >> $GITHUB_OUTPUT
+          else
+            echo "package.json bulunamadı (root veya shell/)"
+            ls -la
+            exit 1
+          fi
+
+      - name: Install dependencies
+        working-directory: ${{ steps.detect.outputs.dir }}
+        run: |
+          npm install
+          npm install electron-builder --save-dev
+
+      - name: Build Windows (NSIS + Portable)
+        working-directory: ${{ steps.detect.outputs.dir }}
+        run: |
+          npx electron-builder --win nsis:ia32 --x64 -c.win.forceCodeSigning=false
+          npx electron-builder --win portable --x64 -c.win.forceCodeSigning=false
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Upload artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: HtStudio-Windows-EXE
+          path: |
+            **/dist/*.exe
+            **/*Setup*.exe
+            **/*portable*.exe
+            **/*-setup.exe
+          if-no-files-found: warn
+          retention-days: 14
+
+      - name: Upload to GitHub Release
+        if: github.event_name == 'release'
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            **/dist/*.exe
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
