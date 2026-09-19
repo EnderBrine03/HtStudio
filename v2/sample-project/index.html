@@ -1,0 +1,45 @@
+<!doctype html>
+<html lang="tr">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>HtStudio Örnek</title>
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+<main>
+  <h1>HtStudio Örnek Uygulama</h1>
+  <p class="muted">Bu sayfa gömülü Chromium'da çalışıyor. Aşağıdaki her düğme bir izin akışını gösterir.</p>
+
+  <section>
+    <h2>Uygulama verisi <span class="tag">izin gerekmez</span></h2>
+    <textarea id="note" rows="3" placeholder="Bir not yaz…"></textarea>
+    <div class="row"><button id="save">Kaydet</button><button id="load">Yükle</button></div>
+  </section>
+
+  <section>
+    <h2>Klasör erişimi <span class="tag">fs</span></h2>
+    <div class="row"><button id="folder">Klasör seç ve listele</button></div>
+    <ul id="files"></ul>
+  </section>
+
+  <section>
+    <h2>Pano, bildirim, sistem</h2>
+    <div class="row">
+      <button id="copy">Panoya kopyala</button>
+      <button id="notify">Bildirim göster</button>
+      <button id="info">Sistem bilgisi</button>
+    </div>
+  </section>
+
+  <section>
+    <h2>Web izinleri <span class="tag">geolocation · camera</span></h2>
+    <div class="row"><button id="geo">Konumumu al</button><button id="cam">Kamerayı aç</button></div>
+    <video id="video" autoplay playsinline muted hidden></video>
+  </section>
+
+  <pre id="out">Hazır.</pre>
+</main>
+<script src="app.js"></script>
+</body>
+</html>
