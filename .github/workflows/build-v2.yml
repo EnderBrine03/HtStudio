@@ -4,9 +4,6 @@ on:
   workflow_dispatch:
   push:
     branches: [v2]
-    paths:
-      - 'v2/**'
-      - '.github/workflows/build-v2.yml'
 
 permissions:
   contents: write
@@ -32,22 +29,22 @@ jobs:
         working-directory: v2
         run: |
           pyinstaller --noconfirm --clean --noconsole --onedir --name HtStudioV2 main.py
+          dir dist\HtStudioV2
 
       - name: Pack sample-project (sidecar)
         working-directory: v2
-        shell: bash
+        shell: cmd
         run: |
-          python pack.py dist/HtStudioV2/HtStudioV2.exe sample-project dist/HtStudioV2/OrnekV2.exe --sidecar
-          ls -la dist/HtStudioV2/
+          dir sample-project
+          python pack.py dist\HtStudioV2\HtStudioV2.exe sample-project dist\HtStudioV2\OrnekV2.exe --sidecar
+          dir dist\HtStudioV2
 
       - name: Zip release folder
         working-directory: v2
-        shell: bash
+        shell: pwsh
         run: |
-          cd dist
-          # Zip the whole onedir output
-          powershell -Command "Compress-Archive -Path 'HtStudioV2' -DestinationPath 'HtStudioV2-win.zip' -Force"
-          ls -la
+          Compress-Archive -Path "dist\HtStudioV2\*" -DestinationPath "dist\HtStudioV2-win.zip" -Force
+          Get-ChildItem dist
 
       - name: Upload artifacts
         uses: actions/upload-artifact@v4
@@ -55,8 +52,6 @@ jobs:
           name: HtStudioV2-win
           path: |
             v2/dist/HtStudioV2-win.zip
-            v2/dist/HtStudioV2/HtStudioV2.exe
-            v2/dist/HtStudioV2/OrnekV2.exe
-            v2/dist/HtStudioV2/OrnekV2.htpack
+            v2/dist/HtStudioV2/**
           if-no-files-found: error
           retention-days: 30
